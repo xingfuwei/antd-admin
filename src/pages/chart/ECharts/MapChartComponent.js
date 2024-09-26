@@ -1,10 +1,10 @@
 import React from 'react'
 import ReactEcharts from 'echarts-for-react'
 
-require('echarts/map/js/china.js')
+require('./map/js/china.js')
 
 class MapChartComponent extends React.Component {
-  constructor () {
+  constructor() {
     super()
     this.timeTicket = null
     const randomData = () => {
@@ -157,7 +157,7 @@ class MapChartComponent extends React.Component {
     }
   }
 
-  componentDidMount () {
+  componentDidMount() {
     if (this.timeTicket) {
       clearInterval(this.timeTicket)
     }
@@ -171,22 +171,26 @@ class MapChartComponent extends React.Component {
     }, 1000)
   }
 
-  componentWillUnmount () {
+  componentWillUnmount() {
     if (this.timeTicket) {
       clearInterval(this.timeTicket)
     }
   }
 
-  render () {
-    let code = "require('echarts/map/js/china.js'); \n" +
-                    '<ReactEcharts \n' +
-                    '    option={this.state.option || {}} \n' +
-                    "    style={{height: '350px', width: '100%'}}  \n" +
-                    "    className='react_for_echarts' />"
+  render() {
+    let code =
+      "require('echarts/map/js/china.js'); \n" +
+      '<ReactEcharts \n' +
+      '    option={this.state.option || {}} \n' +
+      "    style={{height: '350px', width: '100%'}}  \n" +
+      "    className='react_for_echarts' />"
     return (
       <div className="examples">
         <div className="parent">
-          <label> render a china map. <strong>MAP charts</strong>: </label>
+          <label>
+            {' '}
+            render a china map. <strong>MAP charts</strong>:{' '}
+          </label>
           <ReactEcharts
             option={this.state.option}
             style={{ height: '500px', width: '100%' }}

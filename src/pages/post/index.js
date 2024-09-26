@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { PureComponent } from 'react'
 import PropTypes from 'prop-types'
-import { connect } from 'dva'
+import { connect } from 'umi'
 import { Tabs } from 'antd'
-import { routerRedux } from 'dva/router'
-import queryString from 'query-string'
+import { history } from 'umi'
+import { stringify } from 'qs'
+import { t } from "@lingui/macro"
 import { Page } from 'components'
 import List from './components/List'
 
@@ -14,56 +15,78 @@ const EnumPostStatus = {
   PUBLISHED: 2,
 }
 
+@connect(({ post, loading }) => ({ post, loading }))
+class Post extends PureComponent {
+  handleTabClick = key => {
+    const { pathname } = this.props.location
 
-const Index = ({
-  post, dispatch, loading, location,
-}) => {
-  const { list, pagination } = post
-  const { query, pathname } = location
-
-  const listProps = {
-    pagination,
-    dataSource: list,
-    loading: loading.effects['post/query'],
-    onChange (page) {
-      dispatch(routerRedux.push({
-        pathname,
-        search: queryString.stringify({
-          ...query,
-          page: page.current,
-          pageSize: page.pageSize,
-        }),
-      }))
-    },
-  }
-
-  const handleTabClick = (key) => {
-    dispatch(routerRedux.push({
+    history.push({
       pathname,
-      search: queryString.stringify({
+      search: stringify({
         status: key,
       }),
-    }))
+    })
   }
 
+  get listProps() {
+    const { post, loading, location } = this.props
+    const { list, pagination } = post
+    const { query, pathname } = location
 
-  return (<Page inner>
-    <Tabs activeKey={query.status === String(EnumPostStatus.UNPUBLISH) ? String(EnumPostStatus.UNPUBLISH) : String(EnumPostStatus.PUBLISHED)} onTabClick={handleTabClick}>
-      <TabPane tab="Publised" key={String(EnumPostStatus.PUBLISHED)}>
-        <List {...listProps} />
-      </TabPane>
-      <TabPane tab="Unpublish" key={String(EnumPostStatus.UNPUBLISH)}>
-        <List {...listProps} />
-      </TabPane>
-    </Tabs>
-  </Page>)
+    return {
+      pagination,
+      dataSource: list,
+      loading: loading.effects['post/query'],
+      onChange(page) {
+        history.push({
+          pathname,
+          search: stringify({
+            ...query,
+            page: page.current,
+            pageSize: page.pageSize,
+          }),
+        })
+      },
+    }
+  }
+
+  render() {
+    const { location } = this.props
+    const { query } = location
+
+    return (
+      <Page inner>
+        <Tabs
+          activeKey={
+            query.status === String(EnumPostStatus.UNPUBLISH)
+              ? String(EnumPostStatus.UNPUBLISH)
+              : String(EnumPostStatus.PUBLISHED)
+          }
+          onTabClick={this.handleTabClick}
+        >
+          <TabPane
+            tab={t`Publised`}
+            key={String(EnumPostStatus.PUBLISHED)}
+          >
+            <List {...this.listProps} />
+          </TabPane>
+          <TabPane
+            tab={t`Unpublished`}
+            key={String(EnumPostStatus.UNPUBLISH)}
+          >
+            <List {...this.listProps} />
+          </TabPane>
+        </Tabs>
+      </Page>
+    )
+  }
 }
 
-Index.propTypes = {
+Post.propTypes = {
   post: PropTypes.object,
   loading: PropTypes.object,
   location: PropTypes.object,
   dispatch: PropTypes.func,
 }
 
-export default connect(({ post, loading }) => ({ post, loading }))(Index)
+export default Post

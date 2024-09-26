@@ -2,7 +2,7 @@ import React from 'react'
 import ReactEcharts from 'echarts-for-react'
 
 class DynamicChartComponent extends React.Component {
-  constructor (props) {
+  constructor(props) {
     super(props)
     this.timeTicket = null
     this.count = 51
@@ -40,15 +40,35 @@ class DynamicChartComponent extends React.Component {
         show: false,
         min: 0,
         max: 1000,
-        color: ['#BE002F', '#F20C00', '#F00056', '#FF2D51', '#FF2121', '#FF4C00', '#FF7500',
-          '#FF8936', '#FFA400', '#F0C239', '#FFF143', '#FAFF72', '#C9DD22', '#AFDD22',
-          '#9ED900', '#00E500', '#0EB83A', '#0AA344', '#0C8918', '#057748', '#177CB0'],
+        color: [
+          '#BE002F',
+          '#F20C00',
+          '#F00056',
+          '#FF2D51',
+          '#FF2121',
+          '#FF4C00',
+          '#FF7500',
+          '#FF8936',
+          '#FFA400',
+          '#F0C239',
+          '#FFF143',
+          '#FAFF72',
+          '#C9DD22',
+          '#AFDD22',
+          '#9ED900',
+          '#00E500',
+          '#0EB83A',
+          '#0AA344',
+          '#0C8918',
+          '#057748',
+          '#177CB0',
+        ],
       },
       xAxis: [
         {
           type: 'category',
           boundaryGap: true,
-          data: (function () {
+          data: (function() {
             let now = new Date()
             let res = []
             let len = 50
@@ -57,19 +77,19 @@ class DynamicChartComponent extends React.Component {
               now = new Date(now - 2000)
             }
             return res
-          }()),
+          })(),
         },
         {
           type: 'category',
           boundaryGap: true,
-          data: (function () {
+          data: (function() {
             let res = []
             let len = 50
             while (len--) {
               res.push(50 - len + 1)
             }
             return res
-          }()),
+          })(),
         },
       ],
       yAxis: [
@@ -102,25 +122,25 @@ class DynamicChartComponent extends React.Component {
             },
           },
           animationEasing: 'elasticOut',
-          animationDelay (idx) {
+          animationDelay(idx) {
             return idx * 10
           },
-          animationDelayUpdate (idx) {
+          animationDelayUpdate(idx) {
             return idx * 10
           },
-          data: (function () {
+          data: (function() {
             let res = []
             let len = 50
             while (len--) {
               res.push(Math.round(Math.random() * 1000))
             }
             return res
-          }()),
+          })(),
         },
         {
           name: '最新成交价',
           type: 'line',
-          data: (function () {
+          data: (function() {
             let res = []
             let len = 0
             while (len < 50) {
@@ -128,7 +148,7 @@ class DynamicChartComponent extends React.Component {
               len++
             }
             return res
-          }()),
+          })(),
         },
       ],
     }
@@ -140,8 +160,8 @@ class DynamicChartComponent extends React.Component {
     this.fetchNewDate = this.fetchNewDate.bind(this)
   }
 
-  fetchNewDate () {
-    let axisData = (new Date()).toLocaleTimeString().replace(/^\D*/, '')
+  fetchNewDate() {
+    let axisData = new Date().toLocaleTimeString().replace(/^\D*/, '')
     let { option } = this.state
     option.title.text = `Hello Echarts-for-react.${new Date().getSeconds()}`
     let data0 = option.series[0].data
@@ -154,31 +174,33 @@ class DynamicChartComponent extends React.Component {
     option.xAxis[0].data.shift()
     option.xAxis[0].data.push(axisData)
     option.xAxis[1].data.shift()
-    option.xAxis[1].data.push(this.count += 1)
+    option.xAxis[1].data.push((this.count += 1))
     this.setState({ option })
   }
 
-  componentDidMount () {
+  componentDidMount() {
     if (this.timeTicket) {
       clearInterval(this.timeTicket)
     }
     this.timeTicket = setInterval(this.fetchNewDate, 1000)
   }
 
-  componentWillUnmount () {
+  componentWillUnmount() {
     if (this.timeTicket) {
       clearInterval(this.timeTicket)
     }
   }
 
-  render () {
-    let code = "<ReactEcharts ref='echartsInstance' \n" +
-                    '    option={this.state.option} />\n'
+  render() {
+    let code =
+      "<ReactEcharts ref='echartsInstance' \n" +
+      '    option={this.state.option} />\n'
     return (
       <div className="examples">
         <div className="parent">
           <label> use React state to render dynamic chart</label>
-          <ReactEcharts ref="echarts_react"
+          <ReactEcharts
+            ref="echarts_react"
             option={this.state.option}
             style={{ height: 400 }}
           />

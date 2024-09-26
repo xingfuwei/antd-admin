@@ -75,37 +75,41 @@ const chartList = [
     label: 'TransparentBar3D',
     value: 'TransparentBar3DComPonent',
   },
-  {
-    label: 'MoonComponent',
-    value: 'MoonComponent',
-  },
 ]
 
 class Chart extends React.Component {
-  constructor () {
+  constructor() {
     super()
     this.state = {
       type: '',
     }
     this.handleRadioGroupChange = this.handleRadioGroupChange.bind(this)
   }
-  handleRadioGroupChange (e) {
+  handleRadioGroupChange(e) {
     this.setState({
       type: e.target.value,
     })
   }
-  render () {
-    return (<Page inner id="EChartsMain">
-      <RadioGroup options={chartList} defaultValue="dynamic" onChange={this.handleRadioGroupChange} />
-      <div className={styles.chart}>
-        <EchartsComponent type={this.state.type} />
-      </div>
-      <div style={{ pading: 24, marginTop: 24 }}>
-         All demos from <a href="https://github.com/hustcc/echarts-for-react">https://github.com/hustcc/echarts-for-react</a>
-      </div>
-    </Page>)
+  render() {
+    return (
+      <Page inner id="EChartsMain">
+        <RadioGroup
+          options={chartList}
+          defaultValue="dynamic"
+          onChange={this.handleRadioGroupChange}
+        />
+        <div className={styles.chart}>
+          <EchartsComponent type={this.state.type} />
+        </div>
+        <div style={{ pading: 24, marginTop: 24 }}>
+          All demos from{' '}
+          <a href="https://github.com/hustcc/echarts-for-react">
+            https://github.com/hustcc/echarts-for-react
+          </a>
+        </div>
+      </Page>
+    )
   }
 }
-
 
 export default Chart

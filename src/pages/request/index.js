@@ -1,199 +1,258 @@
 import React from 'react'
-import Mock from 'mockjs'
-import { request, config } from 'utils'
-import {
-  Row,
-  Col,
-  Card,
-  Select,
-  Input,
-  Button,
-} from 'antd'
+import { request } from 'utils'
+import { apiPrefix } from 'utils/config'
+import { Row, Col, Select, Form, Input, Button, List, Tag, Checkbox } from 'antd'
+import classnames from 'classnames'
+import { CloseOutlined } from '@ant-design/icons'
+import { Trans } from "@lingui/macro"
+import api from '@/services/api'
+import { Page } from 'components'
+
 import styles from './index.less'
 
-const { api } = config
-const {
-  dashboard, users, userLogin, user, v1test, v2test,
-} = api
+const { Option } = Select
+const InputGroup = Input.Group
+const methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE']
 
-const requestOptions = [
-  {
-    url: user.replace('/:id', ''),
-    desc: 'intercept request by mock.js',
-  },
-  {
-    url: dashboard,
-    desc: 'intercept request by mock.js',
-  },
-  {
-    url: userLogin,
-    method: 'post',
-    data: {
-      username: 'guest',
-      password: 'guest',
-    },
-    desc: 'intercept request by mock.js',
-  },
-  {
-    url: users,
-    desc: 'intercept request by mock.js',
-  },
-  {
-    url: user,
-    desc: 'intercept request by mock.js',
-    data: Mock.mock({
-      id: '@id',
-    }),
-  },
-  {
-    url: user.replace('/:id', ''),
-    desc: 'intercept request by mock.js',
-    method: 'post',
-    data: Mock.mock({
-      name: '@cname',
-      nickName: '@last',
-      phone: /^1[34578]\d{9}$/,
-      'age|11-99': 1,
-      address: '@county(true)',
-      isMale: '@boolean',
-      email: '@email',
-      avatar () {
-        return Mock.Random.image('100x100', Mock.Random.color(), '#757575', 'png', this.nickName.substr(0, 1))
-      },
-    }),
-  },
-  {
-    url: user,
-    desc: 'intercept request by mock.js',
-    method: 'patch',
-    data: Mock.mock({
-      id: '@id',
-      name: '@cname',
-    }),
-  },
-  {
-    url: user,
-    desc: 'intercept request by mock.js',
-    method: 'delete',
-    data: Mock.mock({
-      id: '@id',
-    }),
-  },
-  {
-    url: v1test,
-    desc: 'intercept request by mock.js',
-    method: 'get',
-  },
-  {
-    url: v2test,
-    desc: 'intercept request by mock.js',
-    method: 'get',
-  },
-  {
-    url: 'http://api.asilu.com/weather/',
-    desc: 'cross-domain request, but match config.baseURL(./src/utils/config.js)',
-  },
-  {
-    url: 'http://www.zuimeitianqi.com/zuimei/queryWeather',
-    data: {
-      cityCode: '01010101',
-    },
-    desc: 'cross-domain request by yahoo\'s yql',
-  }]
+const methodTagColor = {
+  GET: 'green',
+  POST: 'orange',
+  DELETE: 'red',
+  PUT: 'geekblue',
+}
 
-export default class RequestPage extends React.Component {
-  constructor (props) {
+const requests = Object.values(api).map(item => {
+  let url = apiPrefix + item
+  let method = 'GET'
+  const paramsArray = item.split(' ')
+  if (paramsArray.length === 2) {
+    method = paramsArray[0]
+    url = apiPrefix + paramsArray[1]
+  }
+  return {
+    method,
+    url,
+  }
+})
+
+let uuid = 2
+class RequestPage extends React.Component {
+  formRef = React.createRef()
+  constructor(props) {
     super(props)
     this.state = {
-      currntRequest: requestOptions[0],
-      method: 'get',
-      result: '',
+      method: 'GET',
+      url: '/api/v1/routes',
+      keys: [1],
+      result: null,
+      visible: true,
     }
-  }
-  componentDidMount () {
-    this.handleRequest()
   }
 
   handleRequest = () => {
-    const { currntRequest } = this.state
-    const { desc, ...requestParams } = currntRequest
+    const { method, url } = this.state
+
+    this.formRef.current.validateFields()
+      .then(values => {
+        // values: { check[1]: true, key[1]: 'username', value[1]: 'admin' }
+
+        const params = {}
+        for (let i in values) {
+          if (i.startsWith('check')) {
+            const index = i.match(/check\[(\d+)\]/)[1]
+            const key = values[`key[${index}]`]
+            params[key] = values[`value[${index}]`]
+          }
+        }
+
+        request({ method, url, data: params }).then(data => {
+          this.setState({
+            result: JSON.stringify(data),
+          })
+        })
+      })
+      .catch(errorInfo => {
+        console.log(errorInfo)
+        /*
+        errorInfo:
+          {
+            values: {
+              username: 'username',
+              password: 'password',
+            },
+            errorFields: [
+              { password: ['username'], errors: ['Please input your Password!'] },
+            ],
+            outOfDate: false,
+          }
+        */
+      })
+  }
+
+  handleClickListItem = ({ method, url }) => {
     this.setState({
-      ...this.state,
-      result: <div key="sending">
-        请求中<br />
-        url:{currntRequest.url}<br />
-        method:{currntRequest.method}<br />
-        params:{currntRequest.data ? JSON.stringify(currntRequest.data) : 'null'}<br />
-      </div>,
-    })
-    request({ ...requestParams }).then((data) => {
-      const { state } = this
-      state.result = [this.state.result, <div key="complete"><div>请求完成</div>{JSON.stringify(data)}</div>]
-      this.setState(state)
+      method,
+      url,
+      keys: [uuid++],
+      result: null,
     })
   }
 
-  handeleURLChange = (value) => {
-    const { state } = this
-    const curretUrl = value.split('?')[0]
-    const curretMethod = value.split('?')[1]
-    const currntItem = requestOptions.filter((item) => {
-      const { method = 'get' } = item
-      return curretUrl === item.url && curretMethod === method
+  handleInputChange = e => {
+    this.setState({
+      url: e.target.value,
     })
-    const [currntRequest] = currntItem
-    state.currntRequest = currntRequest
-    this.setState(state)
   }
 
-  render () {
-    const colProps = {
-      lg: 12,
-      md: 24,
-    }
-    const { result, currntRequest } = this.state
-    const { method = 'get' } = currntRequest
+  handleSelectChange = method => {
+    this.setState({
+      method,
+    })
+  }
+
+  handleAddField = () => {
+    const { keys } = this.state
+    const nextKeys = keys.concat(uuid)
+    uuid++
+    this.setState({
+      keys: nextKeys,
+    })
+  }
+
+  handleRemoveField = key => {
+    const { keys } = this.state
+    this.setState({
+      keys: keys.filter(item => item !== key),
+    })
+  }
+
+  handleVisible = () => {
+    this.setState({
+      visible: !this.state.visible,
+    })
+  }
+
+  render() {
+    const { result, url, method, keys, visible } = this.state
 
     return (
-      <div className="content-inner">
-        <Row gutter={32}>
-          <Col {...colProps}>
-            <Card title="Request"
-              style={{
-                overflow: 'visible',
-              }}
-            >
-              <div className={styles.option}>
-                <Select
-                  style={{
-                    width: '100%',
-                    flex: 1,
-                  }}
-                  defaultValue={`${method.toLocaleUpperCase()}   ${requestOptions[0].url}`}
-                  size="large"
-                  onChange={this.handeleURLChange}
-                >
-                  {requestOptions.map((item, index) => {
-                    const m = item.method || 'get'
-                    return (<Select.Option key={index} value={`${item.url}?${m}`}>
-                      {`${m.toLocaleUpperCase()}    `}{item.url}
-                    </Select.Option>)
+      <Page inner>
+        <Row>
+          <Col lg={8} md={24}>
+            <List
+              className={styles.requestList}
+              dataSource={requests}
+              renderItem={item => (
+                <List.Item
+                  className={classnames(styles.listItem, {
+                    [styles.lstItemActive]:
+                      item.method === method && item.url === url,
                   })}
+                  onClick={this.handleClickListItem.bind(this, item)}
+                >
+                  <span style={{ width: 72 }}>
+                    <Tag
+                      style={{ marginRight: 8 }}
+                      color={methodTagColor[item.method]}
+                    >
+                      {item.method}
+                    </Tag>
+                  </span>
+                  {item.url}
+                </List.Item>
+              )}
+            />
+          </Col>
+          <Col lg={16} md={24}>
+            <Row type="flex" justify="space-between">
+              <InputGroup compact size="large" style={{ flex: 1 }}>
+                <Select
+                  size="large"
+                  value={method}
+                  style={{ width: 100 }}
+                  onChange={this.handleSelectChange}
+                >
+                  {methods.map(item => (
+                    <Option value={item} key={item}>
+                      {item}
+                    </Option>
+                  ))}
                 </Select>
-                <Button type="primary" style={{ width: 100, marginLeft: 16 }} onClick={this.handleRequest}>发送</Button>
+                <Input
+                  value={url}
+                  onChange={this.handleInputChange}
+                  style={{ width: 'calc(100% - 200px)' }}
+                />
+                <Button
+                  ghost={visible}
+                  type={visible ? 'primary' : ''}
+                  onClick={this.handleVisible}
+                  size="large"
+                >
+                  <Trans>Params</Trans>
+                </Button>
+              </InputGroup>
+
+              <Button
+                size="large"
+                type="primary"
+                style={{ width: 100 }}
+                onClick={this.handleRequest}
+              >
+                <Trans>Send</Trans>
+              </Button>
+            </Row>
+            <Form ref={this.formRef} name="control-ref" >
+              <div
+                className={classnames(styles.paramsBlock, {
+                  [styles.hideParams]: !visible,
+                })}
+              >
+                {keys.map((key, index) => (
+                  <Row
+                    gutter={8}
+                    type="flex"
+                    justify="start"
+                    align="middle"
+                    key={key}
+                  >
+                    <Col style={{ marginTop: 8 }}>
+                      <Form.Item name={`check[${key}]`} valuePropName="checked">
+                        <Checkbox defaultChecked />
+                      </Form.Item>
+                    </Col>
+                    <Col style={{ marginTop: 8 }}>
+                      <Form.Item name={`key[${key}]`}>
+                        <Input placeholder="Key" />
+                      </Form.Item>
+                    </Col>
+                    <Col style={{ marginTop: 8 }}>
+                      <Form.Item name={`value[${key}]`}>
+                        <Input placeholder="Value" />
+                      </Form.Item>
+                    </Col>
+                    <Col style={{ marginTop: 8 }}>
+                      <CloseOutlined
+                        onClick={this.handleRemoveField.bind(this, key)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </Col>
+                  </Row>
+                ))}
+
+                <Row style={{ marginTop: 8 }}>
+                  <Button onClick={this.handleAddField}>
+                    <Trans>Add Param</Trans>
+                  </Button>
+                </Row>
               </div>
-              <div className={styles.params}>
-                <div className={styles.label}>Params：</div>
-                <Input disabled value={currntRequest.data ? JSON.stringify(currntRequest.data) : 'null'} size="large" style={{ width: 200 }} placeholder="null" />
-                <div style={{ flex: 1, marginLeft: 16 }}>{currntRequest.desc}</div>
-              </div>
-              <div className={styles.result}>
-                {result}
-              </div>
-            </Card>
+            </Form>
+            <div className={styles.result}>{result}</div>
           </Col>
         </Row>
-      </div>
+      </Page>
     )
   }
 }
+
+export default RequestPage

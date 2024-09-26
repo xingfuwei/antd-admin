@@ -1,157 +1,184 @@
-import React from 'react'
+import React, { PureComponent } from 'react'
 import PropTypes from 'prop-types'
-import { routerRedux } from 'dva/router'
-import { connect } from 'dva'
+import { history } from 'umi'
+import { connect } from 'umi'
 import { Row, Col, Button, Popconfirm } from 'antd'
+import { t } from "@lingui/macro"
 import { Page } from 'components'
-import queryString from 'query-string'
+import { stringify } from 'qs'
 import List from './components/List'
 import Filter from './components/Filter'
 import Modal from './components/Modal'
 
+@connect(({ user, loading }) => ({ user, loading }))
+class User extends PureComponent {
+  handleRefresh = newQuery => {
+    const { location } = this.props
+    const { query, pathname } = location
 
-const User = ({
-  location, dispatch, user, loading,
-}) => {
-  const { query, pathname } = location
-  const {
-    list, pagination, currentItem, modalVisible, modalType, isMotion, selectedRowKeys,
-  } = user
-
-  const handleRefresh = (newQuery) => {
-    dispatch(routerRedux.push({
+    history.push({
       pathname,
-      search: queryString.stringify({
-        ...query,
-        ...newQuery,
-      }),
-    }))
-  }
-
-  const modalProps = {
-    item: modalType === 'create' ? {} : currentItem,
-    visible: modalVisible,
-    maskClosable: false,
-    confirmLoading: loading.effects[`user/${modalType}`],
-    title: `${modalType === 'create' ? 'Create User' : 'Update User'}`,
-    wrapClassName: 'vertical-center-modal',
-    onOk (data) {
-      dispatch({
-        type: `user/${modalType}`,
-        payload: data,
-      })
-        .then(() => {
-          handleRefresh()
-        })
-    },
-    onCancel () {
-      dispatch({
-        type: 'user/hideModal',
-      })
-    },
-  }
-
-  const listProps = {
-    dataSource: list,
-    loading: loading.effects['user/query'],
-    pagination,
-    location,
-    isMotion,
-    onChange (page) {
-      handleRefresh({
-        page: page.current,
-        pageSize: page.pageSize,
-      })
-    },
-    onDeleteItem (id) {
-      dispatch({
-        type: 'user/delete',
-        payload: id,
-      })
-        .then(() => {
-          handleRefresh({
-            page: (list.length === 1 && pagination.current > 1) ? pagination.current - 1 : pagination.current,
-          })
-        })
-    },
-    onEditItem (item) {
-      dispatch({
-        type: 'user/showModal',
-        payload: {
-          modalType: 'update',
-          currentItem: item,
+      search: stringify(
+        {
+          ...query,
+          ...newQuery,
         },
-      })
-    },
-    rowSelection: {
-      selectedRowKeys,
-      onChange: (keys) => {
-        dispatch({
-          type: 'user/updateState',
-          payload: {
-            selectedRowKeys: keys,
-          },
-        })
-      },
-    },
+        { arrayFormat: 'repeat' }
+      ),
+    })
   }
 
-  const filterProps = {
-    isMotion,
-    filter: {
-      ...query,
-    },
-    onFilterChange (value) {
-      handleRefresh({
-        ...value,
-        page: 1,
-      })
-    },
-    onAdd () {
-      dispatch({
-        type: 'user/showModal',
-        payload: {
-          modalType: 'create',
-        },
-      })
-    },
-    switchIsMotion () {
-      dispatch({ type: 'user/switchIsMotion' })
-    },
-  }
+  handleDeleteItems = () => {
+    const { dispatch, user } = this.props
+    const { list, pagination, selectedRowKeys } = user
 
-  const handleDeleteItems = () => {
     dispatch({
       type: 'user/multiDelete',
       payload: {
         ids: selectedRowKeys,
       },
-    })
-      .then(() => {
-        handleRefresh({
-          page: (list.length === selectedRowKeys.length && pagination.current > 1) ? pagination.current - 1 : pagination.current,
-        })
+    }).then(() => {
+      this.handleRefresh({
+        page:
+          list.length === selectedRowKeys.length && pagination.current > 1
+            ? pagination.current - 1
+            : pagination.current,
       })
+    })
   }
 
-  return (
-    <Page inner>
-      <Filter {...filterProps} />
-      {
-        selectedRowKeys.length > 0 &&
-        <Row style={{ marginBottom: 24, textAlign: 'right', fontSize: 13 }}>
-          <Col>
-            {`Selected ${selectedRowKeys.length} items `}
-            <Popconfirm title="Are you sure delete these items?" placement="left" onConfirm={handleDeleteItems}>
-              <Button type="primary" style={{ marginLeft: 8 }}>Remove</Button>
-            </Popconfirm>
-          </Col>
-        </Row>
-      }
-      <List {...listProps} />
-      {modalVisible && <Modal {...modalProps} />}
-    </Page>
-  )
+  get modalProps() {
+    const { dispatch, user, loading } = this.props
+    const { currentItem, modalOpen, modalType } = user
+
+    return {
+      item: modalType === 'create' ? {} : currentItem,
+      open: modalOpen,
+      destroyOnClose: true,
+      maskClosable: false,
+      confirmLoading: loading.effects[`user/${modalType}`],
+      title: `${
+        modalType === 'create' ? t`Create User` : t`Update User`
+      }`,
+      centered: true,
+      onOk: data => {
+        dispatch({
+          type: `user/${modalType}`,
+          payload: data,
+        }).then(() => {
+          this.handleRefresh()
+        })
+      },
+      onCancel() {
+        dispatch({
+          type: 'user/hideModal',
+        })
+      },
+    }
+  }
+
+  get listProps() {
+    const { dispatch, user, loading } = this.props
+    const { list, pagination, selectedRowKeys } = user
+
+    return {
+      dataSource: list,
+      loading: loading.effects['user/query'],
+      pagination,
+      onChange: page => {
+        this.handleRefresh({
+          page: page.current,
+          pageSize: page.pageSize,
+        })
+      },
+      onDeleteItem: id => {
+        dispatch({
+          type: 'user/delete',
+          payload: id,
+        }).then(() => {
+          this.handleRefresh({
+            page:
+              list.length === 1 && pagination.current > 1
+                ? pagination.current - 1
+                : pagination.current,
+          })
+        })
+      },
+      onEditItem(item) {
+        dispatch({
+          type: 'user/showModal',
+          payload: {
+            modalType: 'update',
+            currentItem: item,
+          },
+        })
+      },
+      rowSelection: {
+        selectedRowKeys,
+        onChange: keys => {
+          dispatch({
+            type: 'user/updateState',
+            payload: {
+              selectedRowKeys: keys,
+            },
+          })
+        },
+      },
+    }
+  }
+
+  get filterProps() {
+    const { location, dispatch } = this.props
+    const { query } = location
+
+    return {
+      filter: {
+        ...query,
+      },
+      onFilterChange: value => {
+        this.handleRefresh({
+          ...value,
+        })
+      },
+      onAdd() {
+        dispatch({
+          type: 'user/showModal',
+          payload: {
+            modalType: 'create',
+          },
+        })
+      },
+    }
+  }
+
+  render() {
+    const { user } = this.props
+    const { selectedRowKeys } = user
+
+    return (
+      <Page inner>
+        <Filter {...this.filterProps} />
+        {selectedRowKeys.length > 0 && (
+          <Row style={{ marginBottom: 24, textAlign: 'right', fontSize: 13 }}>
+            <Col>
+              {`Selected ${selectedRowKeys.length} items `}
+              <Popconfirm
+                title="Are you sure delete these items?"
+                placement="left"
+                onConfirm={this.handleDeleteItems}
+              >
+                <Button type="primary" style={{ marginLeft: 8 }}>
+                  Remove
+                </Button>
+              </Popconfirm>
+            </Col>
+          </Row>
+        )}
+        <List {...this.listProps} />
+        <Modal {...this.modalProps} />
+      </Page>
+    )
+  }
 }
 
 User.propTypes = {
@@ -161,4 +188,4 @@ User.propTypes = {
   loading: PropTypes.object,
 }
 
-export default connect(({ user, loading }) => ({ user, loading }))(User)
+export default User

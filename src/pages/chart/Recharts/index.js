@@ -22,27 +22,32 @@ const chartList = [
 ]
 
 class Chart extends React.Component {
-  constructor () {
+  constructor() {
     super()
     this.state = {
       type: '',
     }
     this.handleRadioGroupChange = this.handleRadioGroupChange.bind(this)
   }
-  handleRadioGroupChange (e) {
+  handleRadioGroupChange(e) {
     this.setState({
       type: e.target.value,
     })
   }
-  render () {
-    return (<Page inner>
-      <RadioGroup options={chartList} defaultValue="lineChart" onChange={this.handleRadioGroupChange} />
-      <div className={styles.chart}>
-        <ReChartsComponent type={this.state.type} />
-      </div>
-    </Page>)
+  render() {
+    return (
+      <Page inner>
+        <RadioGroup
+          options={chartList}
+          defaultValue="lineChart"
+          onChange={this.handleRadioGroupChange}
+        />
+        <div className={styles.chart}>
+          <ReChartsComponent type={this.state.type} />
+        </div>
+      </Page>
+    )
   }
 }
-
 
 export default Chart

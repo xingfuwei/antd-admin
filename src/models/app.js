@@ -1,45 +1,58 @@
 /* global window */
-/* global document */
-/* global location */
-/* eslint no-restricted-globals: ["error", "event"] */
 
-import { routerRedux } from 'dva/router'
-import { parse } from 'qs'
+import { history } from 'umi'
+import { stringify } from 'qs'
+import store from 'store'
+const { pathToRegexp } = require("path-to-regexp")
+import { ROLE_TYPE } from 'utils/constant'
+import { queryLayout } from 'utils'
+import { CANCEL_REQUEST_MESSAGE } from 'utils/constant'
+import api from 'api'
 import config from 'config'
-import { EnumRoleType } from 'enums'
-import { query, logout } from 'services/app'
-import * as menusService from 'services/menus'
-import queryString from 'query-string'
 
-const { prefix } = config
+const { queryRouteList, logoutUser, queryUserInfo } = api
+
+const goDashboard = () => {
+  if (pathToRegexp(['/', '/login']).exec(window.location.pathname)) {
+    history.push({
+      pathname: '/dashboard',
+    })
+  }
+}
 
 export default {
   namespace: 'app',
   state: {
-    user: {},
-    permissions: {
-      visit: [],
-    },
-    menu: [
+    routeList: [
       {
-        id: 1,
+        id: '1',
         icon: 'laptop',
         name: 'Dashboard',
+        zhName: '仪表盘',
         router: '/dashboard',
       },
     ],
-    menuPopoverVisible: false,
-    siderFold: window.localStorage.getItem(`${prefix}siderFold`) === 'true',
-    darkTheme: window.localStorage.getItem(`${prefix}darkTheme`) === 'true',
-    isNavbar: document.body.clientWidth < 769,
-    navOpenKeys: JSON.parse(window.localStorage.getItem(`${prefix}navOpenKeys`)) || [],
     locationPathname: '',
     locationQuery: {},
+    theme: store.get('theme') || 'light',
+    collapsed: store.get('collapsed') || false,
+    notifications: [
+      {
+        title: 'New User is registered.',
+        date: new Date(Date.now() - 10000000),
+      },
+      {
+        title: 'Application has been approved.',
+        date: new Date(Date.now() - 50000000),
+      },
+    ],
   },
   subscriptions: {
-
-    setupHistory ({ dispatch, history }) {
-      history.listen((location) => {
+    setup({ dispatch }) {
+      dispatch({ type: 'query' })
+    },
+    setupHistory({ dispatch, history }) {
+      history.listen(location => {
         dispatch({
           type: 'updateState',
           payload: {
@@ -50,137 +63,98 @@ export default {
       })
     },
 
-    setup ({ dispatch }) {
-      dispatch({ type: 'query' })
-      let tid
-      window.onresize = () => {
-        clearTimeout(tid)
-        tid = setTimeout(() => {
-          dispatch({ type: 'changeNavbar' })
-        }, 300)
-      }
-    },
+    setupRequestCancel({ history }) {
+      history.listen(() => {
+        const { cancelRequest = new Map() } = window
 
+        cancelRequest.forEach((value, key) => {
+          if (value.pathname !== window.location.pathname) {
+            value.cancel(CANCEL_REQUEST_MESSAGE)
+            cancelRequest.delete(key)
+          }
+        })
+      })
+    },
   },
   effects: {
-
-    * query ({
-      payload,
-    }, { call, put, select }) {
-      const { success, user } = yield call(query, payload)
+    *query({ payload }, { call, put, select }) {
+      // store isInit to prevent query trigger by refresh
+      const isInit = store.get('isInit')
+      if (isInit) {
+        goDashboard()
+        return
+      }
       const { locationPathname } = yield select(_ => _.app)
+      const { success, user } = yield call(queryUserInfo, payload)
       if (success && user) {
-        const { list } = yield call(menusService.query)
+        const { list } = yield call(queryRouteList)
         const { permissions } = user
-        let menu = list
-        if (permissions.role === EnumRoleType.ADMIN || permissions.role === EnumRoleType.DEVELOPER) {
+        let routeList = list
+        if (
+          permissions.role === ROLE_TYPE.ADMIN ||
+          permissions.role === ROLE_TYPE.DEVELOPER
+        ) {
           permissions.visit = list.map(item => item.id)
         } else {
-          menu = list.filter((item) => {
+          routeList = list.filter(item => {
             const cases = [
               permissions.visit.includes(item.id),
-              item.mpid ? permissions.visit.includes(item.mpid) || item.mpid === '-1' : true,
+              item.mpid
+                ? permissions.visit.includes(item.mpid) || item.mpid === '-1'
+                : true,
               item.bpid ? permissions.visit.includes(item.bpid) : true,
             ]
             return cases.every(_ => _)
           })
         }
-        yield put({
-          type: 'updateState',
-          payload: {
-            user,
-            permissions,
-            menu,
-          },
-        })
-        if (location.pathname === '/login') {
-          yield put(routerRedux.push({
-            pathname: '/dashboard',
-          }))
-        }
-      } else if (config.openPages && config.openPages.indexOf(locationPathname) < 0) {
-        yield put(routerRedux.push({
+        store.set('routeList', routeList)
+        store.set('permissions', permissions)
+        store.set('user', user)
+        store.set('isInit', true)
+        goDashboard()
+      } else if (queryLayout(config.layouts, locationPathname) !== 'public') {
+        history.push({
           pathname: '/login',
-          search: queryString.stringify({
+          search: stringify({
             from: locationPathname,
           }),
-        }))
+        })
       }
     },
 
-    * logout ({
-      payload,
-    }, { call, put }) {
-      const data = yield call(logout, parse(payload))
+    *signOut({ payload }, { call, put }) {
+      const data = yield call(logoutUser)
       if (data.success) {
-        yield put({ type: 'updateState', payload: {
-          user: {},
-          permissions: { visit: [] },
-          menu: [{
-              id: 1,
-              icon: 'laptop',
-              name: 'Dashboard',
-              router: '/dashboard',
-            }],
-        }})
+        store.set('routeList', [])
+        store.set('permissions', { visit: [] })
+        store.set('user', {})
+        store.set('isInit', false)
         yield put({ type: 'query' })
       } else {
-        throw (data)
+        throw data
       }
     },
-
-    * changeNavbar (action, { put, select }) {
-      const { app } = yield (select(_ => _))
-      const isNavbar = document.body.clientWidth < 769
-      if (isNavbar !== app.isNavbar) {
-        yield put({ type: 'handleNavbar', payload: isNavbar })
-      }
-    },
-
   },
   reducers: {
-    updateState (state, { payload }) {
+    updateState(state, { payload }) {
       return {
         ...state,
         ...payload,
       }
     },
 
-    switchSider (state) {
-      window.localStorage.setItem(`${prefix}siderFold`, !state.siderFold)
-      return {
-        ...state,
-        siderFold: !state.siderFold,
-      }
+    handleThemeChange(state, { payload }) {
+      store.set('theme', payload)
+      state.theme = payload
     },
 
-    switchTheme (state) {
-      window.localStorage.setItem(`${prefix}darkTheme`, !state.darkTheme)
-      return {
-        ...state,
-        darkTheme: !state.darkTheme,
-      }
+    handleCollapseChange(state, { payload }) {
+      store.set('collapsed', payload)
+      state.collapsed = payload
     },
 
-    switchMenuPopver (state) {
-      return {
-        ...state,
-        menuPopoverVisible: !state.menuPopoverVisible,
-      }
-    },
-
-    handleNavbar (state, { payload }) {
-      return {
-        ...state,
-        isNavbar: payload,
-      }
-    },
-
-    handleNavOpenKeys (state, { payload: navOpenKeys }) {
-      return {
-        ...state,
-        ...navOpenKeys,
-      }
+    allNotificationsRead(state) {
+      state.notifications = []
     },
   },
 }

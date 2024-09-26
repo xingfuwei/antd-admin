@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactEcharts from 'echarts-for-react'
-import echarts from 'echarts'
+import * as echarts from 'echarts'
 
 const TreemapComponent = () => {
   let diskData = [
@@ -44,22 +44,26 @@ const TreemapComponent = () => {
             {
               value: 24,
               name: 'FacebookAuthenticationPlugin.bundle',
-              path: 'Accounts/Authentication/FacebookAuthenticationPlugin.bundle',
+              path:
+                'Accounts/Authentication/FacebookAuthenticationPlugin.bundle',
             },
             {
               value: 16,
               name: 'LinkedInAuthenticationPlugin.bundle',
-              path: 'Accounts/Authentication/LinkedInAuthenticationPlugin.bundle',
+              path:
+                'Accounts/Authentication/LinkedInAuthenticationPlugin.bundle',
             },
             {
               value: 20,
               name: 'TencentWeiboAuthenticationPlugin.bundle',
-              path: 'Accounts/Authentication/TencentWeiboAuthenticationPlugin.bundle',
+              path:
+                'Accounts/Authentication/TencentWeiboAuthenticationPlugin.bundle',
             },
             {
               value: 16,
               name: 'TwitterAuthenticationPlugin.bundle',
-              path: 'Accounts/Authentication/TwitterAuthenticationPlugin.bundle',
+              path:
+                'Accounts/Authentication/TwitterAuthenticationPlugin.bundle',
             },
             {
               value: 16,
@@ -76,7 +80,8 @@ const TreemapComponent = () => {
             {
               value: 12,
               name: 'SPAAccountsNotificationPlugin.bundle',
-              path: 'Accounts/Notification/SPAAccountsNotificationPlugin.bundle',
+              path:
+                'Accounts/Notification/SPAAccountsNotificationPlugin.bundle',
             },
           ],
         },
@@ -107,7 +112,8 @@ const TreemapComponent = () => {
             {
               value: 28,
               name: 'Contents',
-              path: 'AddressBook Plug-Ins/DirectoryServices.sourcebundle/Contents',
+              path:
+                'AddressBook Plug-Ins/DirectoryServices.sourcebundle/Contents',
             },
           ],
         },
@@ -180,29 +186,33 @@ const TreemapComponent = () => {
     },
   ]
   let formatUtil = echarts.format
-  function getLevelOption () {
-    return [{
-      itemStyle: {
-        normal: {
-          borderWidth: 0,
-          gapWidth: 5,
+  function getLevelOption() {
+    return [
+      {
+        itemStyle: {
+          normal: {
+            borderWidth: 0,
+            gapWidth: 5,
+          },
         },
       },
-    }, {
-      itemStyle: {
-        normal: {
-          gapWidth: 1,
+      {
+        itemStyle: {
+          normal: {
+            gapWidth: 1,
+          },
         },
       },
-    }, {
-      colorSaturation: [0.35, 0.5],
-      itemStyle: {
-        normal: {
-          gapWidth: 1,
-          borderColorSaturation: 0.6,
+      {
+        colorSaturation: [0.35, 0.5],
+        itemStyle: {
+          normal: {
+            gapWidth: 1,
+            borderColorSaturation: 0.6,
+          },
         },
       },
-    }]
+    ]
   }
   const option = {
     title: {
@@ -211,7 +221,7 @@ const TreemapComponent = () => {
     },
 
     tooltip: {
-      formatter (info) {
+      formatter(info) {
         let { value, treePathInfo } = info
         let treePath = []
 
@@ -220,28 +230,32 @@ const TreemapComponent = () => {
         }
 
         return [
-          `<div class="tooltip-title">${formatUtil.encodeHTML(treePath.join('/'))}</div>`,
+          `<div class="tooltip-title">${formatUtil.encodeHTML(
+            treePath.join('/')
+          )}</div>`,
           `Disk Usage: ${formatUtil.addCommas(value)} KB`,
         ].join('')
       },
     },
 
-    series: [{
-      name: 'Disk Usage',
-      type: 'treemap',
-      visibleMin: 300,
-      label: {
-        show: true,
-        formatter: '{b}',
-      },
-      itemStyle: {
-        normal: {
-          borderColor: '#fff',
+    series: [
+      {
+        name: 'Disk Usage',
+        type: 'treemap',
+        visibleMin: 300,
+        label: {
+          show: true,
+          formatter: '{b}',
         },
+        itemStyle: {
+          normal: {
+            borderColor: '#fff',
+          },
+        },
+        levels: getLevelOption(),
+        data: diskData,
       },
-      levels: getLevelOption(),
-      data: diskData,
-    }],
+    ],
   }
 
   return (

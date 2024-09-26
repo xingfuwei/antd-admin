@@ -1,44 +1,88 @@
-import React from 'react'
+import React, { PureComponent } from 'react'
 import PropTypes from 'prop-types'
-import { Icon, Switch } from 'antd'
+import { Switch, Layout } from 'antd'
+import { t } from "@lingui/macro"
+import { Trans } from "@lingui/macro"
+import { BulbOutlined } from '@ant-design/icons'
+import ScrollBar from '../ScrollBar'
 import { config } from 'utils'
-import styles from './Layout.less'
-import Menus from './Menu'
+import SiderMenu from './Menu'
+import styles from './Sider.less'
 
-const Sider = ({
-  siderFold, darkTheme, location, changeTheme, navOpenKeys, changeOpenKeys, menu,
-}) => {
-  const menusProps = {
-    menu,
-    siderFold,
-    darkTheme,
-    location,
-    navOpenKeys,
-    changeOpenKeys,
+class Sider extends PureComponent {
+  render() {
+    const {
+      menus,
+      theme,
+      isMobile,
+      collapsed,
+      onThemeChange,
+      onCollapseChange,
+    } = this.props
+
+    return (
+      <Layout.Sider
+        width={256}
+        theme={theme}
+        breakpoint="lg"
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        onBreakpoint={!isMobile ? onCollapseChange : (broken) => {}}
+        className={styles.sider}
+      >
+        <div className={styles.brand}>
+          <div className={styles.logo}>
+            <img alt="logo" src={config.logoPath} />
+            {!collapsed && <h1>{config.siteName}</h1>}
+          </div>
+        </div>
+
+        <div className={styles.menuContainer}>
+          <ScrollBar
+            options={{
+              // Disabled horizontal scrolling, https://github.com/utatti/perfect-scrollbar#options
+              suppressScrollX: true,
+            }}
+          >
+            <SiderMenu
+              menus={menus}
+              theme={theme}
+              isMobile={isMobile}
+              collapsed={collapsed}
+              onCollapseChange={onCollapseChange}
+            />
+          </ScrollBar>
+        </div>
+        {!collapsed && (
+          <div className={styles.switchTheme}>
+            <span>
+              <BulbOutlined />
+              <Trans>Switch Theme</Trans>
+            </span>
+            <Switch
+              onChange={onThemeChange.bind(
+                this,
+                theme === 'dark' ? 'light' : 'dark'
+              )}
+              defaultChecked={theme === 'dark'}
+              checkedChildren={t`Dark`}
+              unCheckedChildren={t`Light`}
+            />
+          </div>
+        )}
+      </Layout.Sider>
+    )
   }
-  return (
-    <div>
-      <div className={styles.logo}>
-        <img alt="logo" src={config.logo} />
-        {siderFold ? '' : <span>{config.name}</span>}
-      </div>
-      <Menus {...menusProps} />
-      {!siderFold ? <div className={styles.switchtheme}>
-        <span><Icon type="bulb" />Switch Theme</span>
-        <Switch onChange={changeTheme} defaultChecked={darkTheme} checkedChildren="Dark" unCheckedChildren="Light" />
-      </div> : ''}
-    </div>
-  )
 }
 
 Sider.propTypes = {
-  menu: PropTypes.array,
-  siderFold: PropTypes.bool,
-  darkTheme: PropTypes.bool,
-  location: PropTypes.object,
-  changeTheme: PropTypes.func,
-  navOpenKeys: PropTypes.array,
-  changeOpenKeys: PropTypes.func,
+  menus: PropTypes.array,
+  theme: PropTypes.string,
+  isMobile: PropTypes.bool,
+  collapsed: PropTypes.bool,
+  onThemeChange: PropTypes.func,
+  onCollapseChange: PropTypes.func,
 }
 
 export default Sider

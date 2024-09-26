@@ -1,100 +1,176 @@
-/* global window */
-import cloneDeep from 'lodash.clonedeep'
+import { cloneDeep } from 'lodash'
+const { pathToRegexp } = require("path-to-regexp")
+import store from 'store'
+import { i18n } from './config'
+
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+import 'dayjs/locale/zh-cn'
+
+dayjs.extend(relativeTime)
 
 export classnames from 'classnames'
 export config from './config'
 export request from './request'
-export { color } from './theme'
+export { Color } from './theme'
 
-// 连字符转驼峰
-String.prototype.hyphenToHump = function () {
-  return this.replace(/-(\w)/g, (...args) => {
-    return args[1].toUpperCase()
-  })
-}
-
-// 驼峰转连字符
-String.prototype.humpToHyphen = function () {
-  return this.replace(/([A-Z])/g, '-$1').toLowerCase()
-}
-
-// 日期格式化
-Date.prototype.format = function (format) {
-  const o = {
-    'M+': this.getMonth() + 1,
-    'd+': this.getDate(),
-    'h+': this.getHours(),
-    'H+': this.getHours(),
-    'm+': this.getMinutes(),
-    's+': this.getSeconds(),
-    'q+': Math.floor((this.getMonth() + 3) / 3),
-    S: this.getMilliseconds(),
-  }
-  if (/(y+)/.test(format)) {
-    format = format.replace(RegExp.$1, `${this.getFullYear()}`.substr(4 - RegExp.$1.length))
-  }
-  for (let k in o) {
-    if (new RegExp(`(${k})`).test(format)) {
-      format = format.replace(RegExp.$1, RegExp.$1.length === 1 ? o[k] : (`00${o[k]}`).substr(`${o[k]}`.length))
-    }
-  }
-  return format
-}
-
+export const languages = i18n ? i18n.languages.map(item => item.key) : []
+export const defaultLanguage = i18n ? i18n.defaultLanguage : ''
 
 /**
- * @param  name {String}
- * @return  {String}
+ * Query objects that specify keys and values in an array where all values are objects.
+ * @param   {array}         array   An array where all values are objects, like [{key:1},{key:2}].
+ * @param   {string}        key     The key of the object that needs to be queried.
+ * @param   {string}        value   The value of the object that needs to be queried.
+ * @return  {object|undefined}   Return frist object when query success.
  */
-export function queryURL (name) {
-  let reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i')
-  let r = window.location.search.substr(1).match(reg)
-  if (r != null) return decodeURI(r[2])
-  return null
+export function queryArray(array, key, value) {
+  if (!Array.isArray(array)) {
+    return
+  }
+  return array.find(_ => _[key] === value)
 }
 
 /**
- * 数组内查询
- * @param   {array}      array
- * @param   {String}    id
- * @param   {String}    keyAlias
- * @return  {Array}
+ * Convert an array to a tree-structured array.
+ * @param   {array}     array     The Array need to Converted.
+ * @param   {string}    id        The alias of the unique ID of the object in the array.
+ * @param   {string}    parentId       The alias of the parent ID of the object in the array.
+ * @param   {string}    children  The alias of children of the object in the array.
+ * @return  {array}    Return a tree-structured array.
  */
-export function queryArray (array, key, keyAlias = 'key') {
-  if (!(array instanceof Array)) {
-    return null
-  }
-  const item = array.filter(_ => _[keyAlias] === key)
-  if (item.length) {
-    return item[0]
-  }
-  return null
-}
+export function arrayToTree(
+  array,
+  id = 'id',
+  parentId = 'pid',
+  children = 'children'
+) {
+  const result = []
+  const hash = {}
+  const data = cloneDeep(array)
 
-/**
- * 数组格式转树状结构
- * @param   {array}     array
- * @param   {String}    id
- * @param   {String}    pid
- * @param   {String}    children
- * @return  {Array}
- */
-export function arrayToTree (array, id = 'id', pid = 'pid', children = 'children') {
-  let data = cloneDeep(array)
-  let result = []
-  let hash = {}
   data.forEach((item, index) => {
     hash[data[index][id]] = data[index]
   })
 
-  data.forEach((item) => {
-    let hashVP = hash[item[pid]]
-    if (hashVP) {
-      !hashVP[children] && (hashVP[children] = [])
-      hashVP[children].push(item)
+  data.forEach(item => {
+    const hashParent = hash[item[parentId]]
+    if (hashParent) {
+      !hashParent[children] && (hashParent[children] = [])
+      hashParent[children].push(item)
     } else {
       result.push(item)
     }
   })
   return result
+}
+
+
+
+/**
+ * In an array object, traverse all parent IDs based on the value of an object.
+ * @param   {array}     array     The Array need to Converted.
+ * @param   {string}    current   Specify the value of the object that needs to be queried.
+ * @param   {string}    parentId  The alias of the parent ID of the object in the array.
+ * @param   {string}    id        The alias of the unique ID of the object in the array.
+ * @return  {array}    Return a key array.
+ */
+export function queryPathKeys(array, current, parentId, id = 'id') {
+  const result = [current]
+  const hashMap = new Map()
+  array.forEach(item => hashMap.set(item[id], item))
+
+  const getPath = current => {
+    const currentParentId = hashMap.get(current)[parentId]
+    if (currentParentId) {
+      result.push(currentParentId)
+      getPath(currentParentId)
+    }
+  }
+
+  getPath(current)
+  return result
+}
+
+/**
+ * In an array of objects, specify an object that traverses the objects whose parent ID matches.
+ * @param   {array}     array     The Array need to Converted.
+ * @param   {string}    current   Specify the object that needs to be queried.
+ * @param   {string}    parentId  The alias of the parent ID of the object in the array.
+ * @param   {string}    id        The alias of the unique ID of the object in the array.
+ * @return  {array}    Return a key array.
+ */
+export function queryAncestors(array, current, parentId, id = 'id') {
+  const result = [current]
+  const hashMap = new Map()
+  array.forEach(item => hashMap.set(item[id], item))
+
+  const getPath = current => {
+    const currentParentId = hashMap.get(current[id])[parentId]
+    if (currentParentId) {
+      result.push(hashMap.get(currentParentId))
+      getPath(hashMap.get(currentParentId))
+    }
+  }
+
+  getPath(current)
+  return result
+}
+
+/**
+ * Query which layout should be used for the current path based on the configuration.
+ * @param   {layouts}     layouts   Layout configuration.
+ * @param   {pathname}    pathname  Path name to be queried.
+ * @return  {string}   Return frist object when query success.
+ */
+export function queryLayout(layouts, pathname) {
+  let result = 'public'
+
+  const isMatch = regepx => {
+    return regepx instanceof RegExp
+      ? regepx.test(pathname)
+      : pathToRegexp(regepx).exec(pathname)
+  }
+
+  for (const item of layouts) {
+    let include = false
+    let exclude = false
+    if (item.include) {
+      for (const regepx of item.include) {
+        if (isMatch(regepx)) {
+          include = true
+          break
+        }
+      }
+    }
+
+    if (include && item.exclude) {
+      for (const regepx of item.exclude) {
+        if (isMatch(regepx)) {
+          exclude = true
+          break
+        }
+      }
+    }
+
+    if (include && !exclude) {
+      result = item.name
+      break
+    }
+  }
+
+  return result
+}
+
+
+export function getLocale() {
+  return store.get('locale') || defaultLanguage
+}
+
+export function setLocale(language) {
+  if (getLocale() !== language) {
+    dayjs.locale(language === 'zh' ? 'zh-cn' : language)
+    store.set('locale', language)
+    window.location.reload()
+  }
 }

@@ -1,113 +1,126 @@
-import React from 'react'
+import React, { PureComponent } from 'react'
 import PropTypes from 'prop-types'
-import { Table, Modal } from 'antd'
-import classnames from 'classnames'
+import { Table, Modal, Avatar } from 'antd'
 import { DropOption } from 'components'
-import { Link } from 'react-router-dom'
-import AnimTableBody from 'components/DataTable/AnimTableBody'
+import { t } from "@lingui/macro"
+import { Trans } from "@lingui/macro"
+import { Link } from 'umi'
 import styles from './List.less'
 
 const { confirm } = Modal
 
-const List = ({
-  onDeleteItem, onEditItem, isMotion, location, ...tableProps
-}) => {
+class List extends PureComponent {
+  handleMenuClick = (record, e) => {
+    const { onDeleteItem, onEditItem } = this.props
 
-  const handleMenuClick = (record, e) => {
     if (e.key === '1') {
       onEditItem(record)
     } else if (e.key === '2') {
       confirm({
-        title: 'Are you sure delete this record?',
-        onOk () {
+        title: t`Are you sure delete this record?`,
+        onOk() {
           onDeleteItem(record.id)
         },
       })
     }
   }
 
-  const columns = [
-    {
-      title: 'Avatar',
-      dataIndex: 'avatar',
-      key: 'avatar',
-      width: 64,
-      className: styles.avatar,
-      render: text => <img alt="avatar" width={24} src={text} />,
-    }, {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text, record) => <Link to={`user/${record.id}`}>{text}</Link>,
-    }, {
-      title: 'NickName',
-      dataIndex: 'nickName',
-      key: 'nickName',
-    }, {
-      title: 'Age',
-      dataIndex: 'age',
-      key: 'age',
-    }, {
-      title: 'Gender',
-      dataIndex: 'isMale',
-      key: 'isMale',
-      render: text => (<span>{text
-        ? 'Male'
-        : 'Female'}</span>),
-    }, {
-      title: 'Phone',
-      dataIndex: 'phone',
-      key: 'phone',
-    }, {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
-    }, {
-      title: 'Address',
-      dataIndex: 'address',
-      key: 'address',
-    }, {
-      title: 'CreateTime',
-      dataIndex: 'createTime',
-      key: 'createTime',
-    }, {
-      title: 'Operation',
-      key: 'operation',
-      width: 100,
-      render: (text, record) => {
-        return <DropOption onMenuClick={e => handleMenuClick(record, e)} menuOptions={[{ key: '1', name: 'Update' }, { key: '2', name: 'Delete' }]} />
+  render() {
+    const { onDeleteItem, onEditItem, ...tableProps } = this.props
+
+    const columns = [
+      {
+        title: <Trans>Avatar</Trans>,
+        dataIndex: 'avatar',
+        key: 'avatar',
+        width: '7%',
+        fixed: 'left',
+        render: text => <Avatar style={{ marginLeft: 8 }} src={text} />,
       },
-    },
-  ]
+      {
+        title: <Trans>Name</Trans>,
+        dataIndex: 'name',
+        key: 'name',
+        render: (text, record) => <Link to={`user/${record.id}`}>{text}</Link>,
+      },
+      {
+        title: <Trans>NickName</Trans>,
+        dataIndex: 'nickName',
+        key: 'nickName',
+      },
+      {
+        title: <Trans>Age</Trans>,
+        dataIndex: 'age',
+        width: '6%',
+        key: 'age',
+      },
+      {
+        title: <Trans>Gender</Trans>,
+        dataIndex: 'isMale',
+        key: 'isMale',
+        width: '7%',
+        render: text => <span>{text ? 'Male' : 'Female'}</span>,
+      },
+      {
+        title: <Trans>Phone</Trans>,
+        dataIndex: 'phone',
+        key: 'phone',
+      },
+      {
+        title: <Trans>Email</Trans>,
+        dataIndex: 'email',
+        key: 'email',
+      },
+      {
+        title: <Trans>Address</Trans>,
+        dataIndex: 'address',
+        key: 'address',
+      },
+      {
+        title: <Trans>CreateTime</Trans>,
+        dataIndex: 'createTime',
+        key: 'createTime',
+      },
+      {
+        title: <Trans>Operation</Trans>,
+        key: 'operation',
+        fixed: 'right',
+        width: '8%',
+        render: (text, record) => {
+          return (
+            <DropOption
+              onMenuClick={e => this.handleMenuClick(record, e)}
+              menuOptions={[
+                { key: '1', name: t`Update` },
+                { key: '2', name: t`Delete` },
+              ]}
+            />
+          )
+        },
+      },
+    ]
 
-  const AnimateBody = (props) => {
-    return <AnimTableBody {...props} />
+    return (
+      <Table
+        {...tableProps}
+        pagination={{
+          ...tableProps.pagination,
+          showTotal: total => t`Total ${total} Items`,
+        }}
+        className={styles.table}
+        bordered
+        scroll={{ x: 1200 }}
+        columns={columns}
+        simple
+        rowKey={record => record.id}
+      />
+    )
   }
-
-  const CommonBody = (props) => {
-    return <tbody {...props} />
-  }
-
-  return (
-    <Table
-      {...tableProps}
-      className={classnames(styles.table, { [styles.motion]: isMotion })}
-      bordered
-      scroll={{ x: 1250 }}
-      columns={columns}
-      simple
-      rowKey={record => record.id}
-      components={{
-        body: { wrapper: isMotion ? AnimateBody : CommonBody },
-      }}
-    />
-  )
 }
 
 List.propTypes = {
   onDeleteItem: PropTypes.func,
   onEditItem: PropTypes.func,
-  isMotion: PropTypes.bool,
   location: PropTypes.object,
 }
 

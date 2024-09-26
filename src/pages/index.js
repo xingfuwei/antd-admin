@@ -1,3 +1,11 @@
-import Redirect from 'umi/redirect'
+import React, { PureComponent } from 'react'
+import { Redirect } from 'umi'
+import { t } from "@lingui/macro"
 
-export default () => <Redirect to="/dashboard" />
+class Index extends PureComponent {
+  render() {
+    return <Redirect to={t`/dashboard`} />
+  }
+}
+
+export default Index

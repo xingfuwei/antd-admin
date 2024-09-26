@@ -1,28 +1,30 @@
-/* global window */
 import modelExtend from 'dva-model-extend'
-import { config } from 'utils'
-import { create, remove, update } from './services/user'
-import * as usersService from './services/users'
+const { pathToRegexp } = require("path-to-regexp")
+import api from 'api'
 import { pageModel } from 'utils/model'
 
-const { query } = usersService
-const { prefix } = config
+const {
+  queryUserList,
+  createUser,
+  removeUser,
+  updateUser,
+  removeUserList,
+} = api
 
 export default modelExtend(pageModel, {
   namespace: 'user',
 
   state: {
     currentItem: {},
-    modalVisible: false,
+    modalOpen: false,
     modalType: 'create',
     selectedRowKeys: [],
-    isMotion: window.localStorage.getItem(`${prefix}userIsMotion`) === 'true',
   },
 
   subscriptions: {
-    setup ({ dispatch, history }) {
-      history.listen((location) => {
-        if (location.pathname === '/user') {
+    setup({ dispatch, history }) {
+      history.listen(location => {
+        if (pathToRegexp('/user').exec(location.pathname)) {
           const payload = location.query || { page: 1, pageSize: 10 }
           dispatch({
             type: 'query',
@@ -34,9 +36,8 @@ export default modelExtend(pageModel, {
   },
 
   effects: {
-
-    * query ({ payload = {} }, { call, put }) {
-      const data = yield call(query, payload)
+    *query({ payload = {} }, { call, put }) {
+      const data = yield call(queryUserList, payload)
       if (data) {
         yield put({
           type: 'querySuccess',
@@ -52,18 +53,23 @@ export default modelExtend(pageModel, {
       }
     },
 
-    * delete ({ payload }, { call, put, select }) {
-      const data = yield call(remove, { id: payload })
+    *delete({ payload }, { call, put, select }) {
+      const data = yield call(removeUser, { id: payload })
       const { selectedRowKeys } = yield select(_ => _.user)
       if (data.success) {
-        yield put({ type: 'updateState', payload: { selectedRowKeys: selectedRowKeys.filter(_ => _ !== payload) } })
+        yield put({
+          type: 'updateState',
+          payload: {
+            selectedRowKeys: selectedRowKeys.filter(_ => _ !== payload),
+          },
+        })
       } else {
         throw data
       }
     },
 
-    * multiDelete ({ payload }, { call, put }) {
-      const data = yield call(usersService.remove, payload)
+    *multiDelete({ payload }, { call, put }) {
+      const data = yield call(removeUserList, payload)
       if (data.success) {
         yield put({ type: 'updateState', payload: { selectedRowKeys: [] } })
       } else {
@@ -71,8 +77,8 @@ export default modelExtend(pageModel, {
       }
     },
 
-    * create ({ payload }, { call, put }) {
-      const data = yield call(create, payload)
+    *create({ payload }, { call, put }) {
+      const data = yield call(createUser, payload)
       if (data.success) {
         yield put({ type: 'hideModal' })
       } else {
@@ -80,33 +86,25 @@ export default modelExtend(pageModel, {
       }
     },
 
-    * update ({ payload }, { select, call, put }) {
+    *update({ payload }, { select, call, put }) {
       const id = yield select(({ user }) => user.currentItem.id)
       const newUser = { ...payload, id }
-      const data = yield call(update, newUser)
+      const data = yield call(updateUser, newUser)
       if (data.success) {
         yield put({ type: 'hideModal' })
       } else {
         throw data
       }
     },
-
   },
 
   reducers: {
-
-    showModal (state, { payload }) {
-      return { ...state, ...payload, modalVisible: true }
+    showModal(state, { payload }) {
+      return { ...state, ...payload, modalOpen: true }
     },
 
-    hideModal (state) {
-      return { ...state, modalVisible: false }
+    hideModal(state) {
+      return { ...state, modalOpen: false }
     },
-
-    switchIsMotion (state) {
-      window.localStorage.setItem(`${prefix}userIsMotion`, !state.isMotion)
-      return { ...state, isMotion: !state.isMotion }
-    },
-
   },
 })

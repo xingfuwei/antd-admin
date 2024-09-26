@@ -1,29 +1,39 @@
-const APIV1 = '/api/v1'
-const APIV2 = '/api/v2'
-
 module.exports = {
-  name: 'AntD Admin',
-  prefix: 'antdAdmin',
-  footerText: 'Ant Design Admin  © 2018 zuiidea',
-  logo: '/public/logo.svg',
-  iconFontCSS: '/public/iconfont.css',
-  iconFontJS: '/public/iconfont.js',
-  CORS: [],
-  openPages: ['/login'],
+  siteName: 'AntD Admin',
+  copyright: 'Ant Design Admin  ©2020 zuiidea',
+  logoPath: '/logo.svg',
   apiPrefix: '/api/v1',
-  APIV1,
-  APIV2,
-  api: {
-    userLogin: `${APIV1}/user/login`,
-    userLogout: `${APIV1}/user/logout`,
-    userInfo: `${APIV1}/userInfo`,
-    users: `${APIV1}/users`,
-    posts: `${APIV1}/posts`,
-    user: `${APIV1}/user/:id`,
-    dashboard: `${APIV1}/dashboard`,
-    menus: `${APIV1}/menus`,
-    weather: `${APIV1}/weather`,
-    v1test: `${APIV1}/test`,
-    v2test: `${APIV2}/test`,
+  fixedHeader: true, // sticky primary layout header
+
+  /* Layout configuration, specify which layout to use for route. */
+  layouts: [
+    {
+      name: 'primary',
+      include: [/.*/],
+      exclude: [/(\/(en|zh))*\/login/],
+    },
+  ],
+
+  /* I18n configuration, `languages` and `defaultLanguage` are required currently. */
+  i18n: {
+    /* Countrys flags: https://www.flaticon.com/packs/countrys-flags */
+    languages: [
+      {
+        key: 'pt-br',
+        title: 'Português',
+        flag: '/portugal.svg',
+      },
+      {
+        key: 'en',
+        title: 'English',
+        flag: '/america.svg',
+      },
+      {
+        key: 'zh',
+        title: '中文',
+        flag: '/china.svg',
+      },
+    ],
+    defaultLanguage: 'en',
   },
 }

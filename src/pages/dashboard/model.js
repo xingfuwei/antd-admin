@@ -1,8 +1,11 @@
 import { parse } from 'qs'
 import modelExtend from 'dva-model-extend'
-import { query } from './services/dashboard'
+import api from 'api'
+const { pathToRegexp } = require("path-to-regexp")
 import { model } from 'utils/model'
-import * as weatherService from './services/weather'
+
+const { queryDashboard, queryWeather } = api
+const avatar = '//cdn.antd-admin.zuiidea.com/bc442cf0cc6f7940dcc567e465048d1a8d634493198c4-sPx5BR_fw236.jpeg'
 
 export default modelExtend(model, {
   namespace: 'dashboard',
@@ -11,11 +14,11 @@ export default modelExtend(model, {
       city: '深圳',
       temperature: '30',
       name: '晴',
-      icon: '//s5.sencdn.com/web/icons/3d_50/2.png',
+      icon: '//cdn.antd-admin.zuiidea.com/sun.png',
     },
     sales: [],
     quote: {
-      avatar: 'http://img.hb.aicdn.com/bc442cf0cc6f7940dcc567e465048d1a8d634493198c4-sPx5BR_fw236',
+      avatar,
     },
     numbers: [],
     recentSales: [],
@@ -24,13 +27,16 @@ export default modelExtend(model, {
     browser: [],
     cpu: {},
     user: {
-      avatar: 'http://img.hb.aicdn.com/bc442cf0cc6f7940dcc567e465048d1a8d634493198c4-sPx5BR_fw236',
+      avatar,
     },
   },
   subscriptions: {
-    setup ({ dispatch, history }) {
+    setup({ dispatch, history }) {
       history.listen(({ pathname }) => {
-        if (pathname === '/dashboard' || pathname === '/') {
+        if (
+          pathToRegexp('/dashboard').exec(pathname) ||
+          pathToRegexp('/').exec(pathname)
+        ) {
           dispatch({ type: 'query' })
           dispatch({ type: 'queryWeather' })
         }
@@ -38,20 +44,16 @@ export default modelExtend(model, {
     },
   },
   effects: {
-    * query ({
-      payload,
-    }, { call, put }) {
-      const data = yield call(query, parse(payload))
+    *query({ payload }, { call, put }) {
+      const data = yield call(queryDashboard, parse(payload))
       yield put({
         type: 'updateState',
         payload: data,
       })
     },
-    * queryWeather ({
-      payload = {},
-    }, { call, put }) {
+    *queryWeather({ payload = {} }, { call, put }) {
       payload.location = 'shenzhen'
-      const result = yield call(weatherService.query, payload)
+      const result = yield call(queryWeather, payload)
       const { success } = result
       if (success) {
         const data = result.results[0]
@@ -59,7 +61,7 @@ export default modelExtend(model, {
           city: data.location.name,
           temperature: data.now.temperature,
           name: data.now.text,
-          icon: `//s5.sencdn.com/web/icons/3d_50/${data.now.code}.png`,
+          icon: `//cdn.antd-admin.zuiidea.com/web/icons/3d_50/${data.now.code}.png`,
         }
         yield put({
           type: 'updateState',
